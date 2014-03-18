@@ -1,4 +1,4 @@
-# billy-data-fixture-adapter
+# billy-data-fixture-adapter [![Build Status](https://travis-ci.org/billysbilling/billy-data-fixture-adapter.png?branch=master)](https://travis-ci.org/billysbilling/billy-data-fixture-adapter)
 
 An adapter for [billy-data](https://github.com/billysbilling/billy-data) that uses local fixture data to make it easy to use billy-data in tests.
 
