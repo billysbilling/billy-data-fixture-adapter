@@ -1,10 +1,6 @@
 var FixtureRequest = require('../src/fixture-request');
 
-QUnit.module('fixture-request', {
-    setup: function() {
-        FixtureRequest.reopen({ DELAY: 0 });
-    }
-});
+QUnit.module('fixture-request');
 
 asyncTest('`schedule` schedules a callback to run later', function() {
     expect(1);

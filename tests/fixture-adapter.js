@@ -18,8 +18,6 @@ QUnit.module('fixture-adapter', {
     setup: function() {
         amock.install();
         
-        FixtureRequest.reopen({ DELAY: 0 });
-        
         oldAdapter = BD.store.get('adapter');
         adapter = FixtureAdapter.create();
         BD.store.set('adapter', adapter);

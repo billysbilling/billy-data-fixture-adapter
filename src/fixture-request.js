@@ -3,7 +3,7 @@ require('ember');
 
 module.exports = Em.Object.extend({
 
-    DELAY: 500,
+    DELAY: 0,
 
     init: function() {
         this.timeoutId = null;
