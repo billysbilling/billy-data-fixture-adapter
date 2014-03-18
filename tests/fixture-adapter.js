@@ -1,18 +1,35 @@
 require('./helpers');
 
-var FixtureAdapter = require('../src/fixture-adapter'),
+var amock = require('amock'),
+    sinon = require('sinon'),
+    FixtureAdapter = require('../src/fixture-adapter'),
     FixtureRequest = require('../src/fixture-request');
 
 var adapter,
-    oldAdapter;
+    oldAdapter,
+    restAdapterDeleteRecordStub,
+    restAdapterDeleteRecordsStub,
+    restAdapterFindOneStub,
+    restAdapterFindByQueryStub,
+    restAdapterSaveRecordStub,
+    restAdapterCommitTransactionBulkStub;
 
 QUnit.module('fixture-adapter', {
     setup: function() {
+        amock.install();
+        
         FixtureRequest.reopen({ DELAY: 0 });
         
         oldAdapter = BD.store.get('adapter');
         adapter = FixtureAdapter.create();
         BD.store.set('adapter', adapter);
+
+        restAdapterDeleteRecordStub = sinon.stub(adapter.restAdapter, 'deleteRecord');
+        restAdapterDeleteRecordsStub = sinon.stub(adapter.restAdapter, 'deleteRecords');
+        restAdapterFindOneStub = sinon.stub(adapter.restAdapter, 'findOne');
+        restAdapterFindByQueryStub = sinon.stub(adapter.restAdapter, 'findByQuery');
+        restAdapterSaveRecordStub = sinon.stub(adapter.restAdapter, 'saveRecord');
+        restAdapterCommitTransactionBulkStub = sinon.stub(adapter.restAdapter, 'commitTransactionBulk');
         
         App.Category = BD.Model.extend({
             name: BD.attr('string'),
@@ -55,8 +72,17 @@ QUnit.module('fixture-adapter', {
     },
 
     teardown: function() {
+        restAdapterDeleteRecordStub.restore();
+        restAdapterDeleteRecordsStub.restore();
+        restAdapterFindOneStub.restore();
+        restAdapterFindByQueryStub.restore();
+        restAdapterSaveRecordStub.restore();
+        restAdapterCommitTransactionBulkStub.restore();
+        
         BD.store.set('adapter', oldAdapter);
         BD.store.reset();
+
+        amock.uninstall();
     }
 
 });
@@ -79,6 +105,7 @@ asyncTest('`deleteRecords` deletes multiple records', function() {
     var records = [App.Category.find(1), App.Category.find(2)];
     var success = function(payload) {
         equal(adapter.fixturesForType(App.Category).length, 0);
+        ok(restAdapterDeleteRecordsStub.notCalled);
         start();
     };
     adapter.deleteRecords(BD.store, App.Category, records, success, $.noop);
@@ -86,24 +113,14 @@ asyncTest('`deleteRecords` deletes multiple records', function() {
 
 asyncTest('`adapter.deleteRecord` deletes the record', function() {
     var category = App.Category.find(1);
-    var success = function(payload) {
+    var success = function() {
         var fixtures = adapter.fixturesForType(App.Category);
         equal(fixtures.length, 1);
         equal(fixtures[0].id, 2);
+        ok(restAdapterDeleteRecordStub.notCalled);
         start();
     };
     adapter.deleteRecord(BD.store, category, 1, success, $.noop);
-});
-
-asyncTest('`record.deleteRecord` deletes the record', function() {
-    var category = App.Category.find(1);
-    category.deleteRecord()
-        .success(function() {
-            var fixtures = adapter.fixturesForType(App.Category);
-            equal(fixtures.length, 1);
-            equal(fixtures[0].id, 2);
-            start();
-        });
 });
 
 asyncTest('when parent record is saved, deleted embedded records should be unloaded', function() {
@@ -149,6 +166,7 @@ asyncTest('`findOne` should return the found model', function() {
     var success = function(payload) {
         notStrictEqual(payload.category, adapter.fixturesForType(App.Category)[0], 'data should be a copy');
         equal(payload.category.name, 'Billy');
+        ok(restAdapterFindOneStub.notCalled);
         start();
     };
     adapter.findOne(BD.store, App.Category, category, 1, {}, success, $.noop);
@@ -185,6 +203,7 @@ asyncTest('`saveRecord` adds one item when fixtures are empty and finds first av
         equal(fixtures[2].id, 'category3');
         equal(fixtures[2].name, 'Adam');
         equal(fixtures[2].isPublic, true);
+        ok(restAdapterSaveRecordStub.notCalled);
         start();
     };
     var error = function() {};
@@ -322,6 +341,7 @@ asyncTest('`findByQuery` calls success with a filtered payload and ignores pageS
         notStrictEqual(payload.categories[0], adapter.fixturesForType(App.Category)[1], 'data should be a copy');
         equal(payload.categories[0].id, 2);
         equal(payload.categories[0].name, 'Noah');
+        ok(restAdapterFindByQueryStub.notCalled);
         start();
     };
     var query = {
@@ -444,11 +464,12 @@ asyncTest('`findByQuery` uses custom filters', function() {
 });
 
 asyncTest('`commitTransactionBulk` adds items not saved in the fixtures', function() {
-    expect(1);
+    expect(2);
     var error = function() {};
     var data = { categories: [{name: 'Tesla'}, {name: 'Edison'}] };
     var success = function(payload) {
         equal(adapter.fixturesForType(App.Category).length, 4);
+        ok(restAdapterCommitTransactionBulkStub.notCalled);
         start();
     };
     adapter.commitTransactionBulk(BD.store, App.Category, 'categories',
@@ -476,5 +497,82 @@ asyncTest('`commitTransactionBulk` calls success with a payload', function() {
     };
     var data = { categories: [] };
     adapter.commitTransactionBulk(BD.store, App.Category, 'categories',
-                                  data, success, $.noop, $.noop);
+        data, success, $.noop, $.noop);
+});
+
+
+asyncTest('`deleteRecords` delegates to REST adapter when mock exists', function() {
+    amock('DELETE', '/categories?ids[]=1&ids[]=2');
+
+    Em.RSVP.all([App.Category.find(1), App.Category.find(2)]).then(function(records) {
+        adapter.deleteRecords(BD.store, App.Category, records, $.noop, $.noop);
+
+        ok(restAdapterDeleteRecordsStub.calledOnce);
+        
+        start();
+    });
+});
+
+asyncTest('`deleteRecord` delegates to REST adapter when mock exists', function() {
+    amock('DELETE', '/categories/1');
+
+    App.Category.find(1).promise.then(function(category) {
+        adapter.deleteRecord(BD.store, category, 1, $.noop, $.noop);
+
+        ok(restAdapterDeleteRecordStub.calledOnce);
+        
+        start();
+    });
+});
+
+test('`findOne` delegates to REST adapter when mock exists', function() {
+    amock('GET', '/categories/1');
+
+    var category = App.Category.createRecord();
+    adapter.findOne(BD.store, App.Category, category, 1, {}, $.noop, $.noop);
+
+    ok(restAdapterFindOneStub.calledOnce);
+});
+
+test('`findByQuery` delegates to REST adapter when mock exists', function() {
+    amock('GET', '/categories?name=Noah&pageSize=100');
+
+    var query = {
+        name: 'Noah',
+        pageSize: 100
+    };
+    adapter.findByQuery(BD.store, App.Category, query, $.noop, $.noop, $.noop);
+
+    ok(restAdapterFindByQueryStub.calledOnce);
+});
+
+test('`saveRecord` delegates to REST adapter when mock exists for new record', function() {
+    amock('POST', '/categories');
+
+    var record = App.Category.createRecord({
+        name: 'Adam'
+    });
+    adapter.saveRecord(BD.store, record, {}, {}, $.noop, $.noop);
+
+    ok(restAdapterSaveRecordStub.calledOnce);
+});
+
+test('`saveRecord` delegates to REST adapter when mock exists for existing record', function() {
+    amock('PUT', '/categories/8');
+
+    var record = App.Category.load({
+        id: 8,
+        name: 'Adam'
+    });
+    adapter.saveRecord(BD.store, record, {}, {}, $.noop, $.noop);
+
+    ok(restAdapterSaveRecordStub.calledOnce);
+});
+
+test('`commitTransactionBulk` delegates to REST adapter when mock exists for existing record', function() {
+    amock('PATCH', '/categories');
+
+    adapter.commitTransactionBulk(BD.store, App.Category, 'categories', {}, $.noop, $.noop);
+
+    ok(restAdapterCommitTransactionBulkStub.calledOnce);
 });

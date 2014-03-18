@@ -1,13 +1,15 @@
 require('billy-data');
 require('ember');
 
-var FixtureRequest = require('./fixture-request');
+var amock = require('amock'),
+    FixtureRequest = require('./fixture-request');
 
 module.exports = Em.Object.extend({
 
     init: function() {
         this._super();
         this._fixtures = {};
+        this.restAdapter = BD.RestAdapter.create();
     },
     
     reset: function() {
@@ -39,20 +41,34 @@ module.exports = Em.Object.extend({
         this._remove(record.constructor, record.get('id'));
     },
 
-    deleteRecords: function(store, type, records, success, error) {
+    deleteRecords: function(store, type, recordsToDelete, success, error) {
+        var idsQuery = recordsToDelete.map(function(r) {
+            return 'ids[]='+encodeURIComponent(r.get('id'));
+        }).join('&');
+        var url = '/' + BD.pluralize(store._rootForType(type)) + '?' + idsQuery;
+        
+        if (amock.has('DELETE', url)) {
+            return this.restAdapter.deleteRecords.apply(this.restAdapter, arguments);
+        }
+        
         return this._simulateRemoteCall(function() {
-            this._didDeleteRecords(store, type, records, success, error);
+            this._didDeleteRecords(store, type, recordsToDelete, success, error);
         }, this);
     },
 
-    _didDeleteRecords: function(store, type, records, success, error) {
-        records.forEach(function(record) {
+    _didDeleteRecords: function(store, type, recordsToDelete, success, error) {
+        recordsToDelete.forEach(function(record) {
             this._remove(type, record.get('id'));
         }, this);
         success({ meta: { status: 200, success: true } });
     },
 
     deleteRecord: function(store, r, id, success, error) {
+        var url = '/' + BD.pluralize(store._rootForType(r.constructor)) + '/' + encodeURIComponent(id);
+        if (amock.has('DELETE', url)) {
+            return this.restAdapter.deleteRecord.apply(this.restAdapter, arguments);
+        }
+        
         return this._simulateRemoteCall(function() {
             this._didDeleteRecord(store, r, id, success, error);
         }, this);
@@ -62,8 +78,13 @@ module.exports = Em.Object.extend({
         this._remove(r.constructor, id);
         success({ meta: { status: 200, success: true } });
     },
-
+    
     findOne: function(store, type, r, id, query, success, error) {
+        var url = '/' + BD.pluralize(store._rootForType(type)) + '/' + encodeURIComponent(id);
+        if (amock.has('GET', url)) {
+            return this.restAdapter.findOne.apply(this.restAdapter, arguments);
+        }
+
         return this._simulateRemoteCall(function() {
             this._didFindOne(store, type, r, id, query, success, error);
         }, this);
@@ -93,6 +114,11 @@ module.exports = Em.Object.extend({
     },
 
     findByQuery: function(store, type, query, success, error, complete) {
+        var url  = '/' + BD.pluralize(store._rootForType(type)) + '?' + $.param(query);
+        if (amock.has('GET', url)) {
+            return this.restAdapter.findByQuery.apply(this.restAdapter, arguments);
+        }
+
         return this._simulateRemoteCall(function() {
             this._didFindByQuery(store, type, query, success, error, complete);
         }, this);
@@ -166,6 +192,11 @@ module.exports = Em.Object.extend({
     },
 
     saveRecord: function(store, r, payload, options, success, error) {
+        var url = '/' + BD.pluralize(store._rootForType(r.constructor)) + (!r.get('isNew') ? '/' + encodeURIComponent(r.get('id')) : '');
+        if (amock.has(r.get('isNew') ? 'POST' : 'PUT', url)) {
+            return this.restAdapter.saveRecord.apply(this.restAdapter, arguments);
+        }
+
         var self = this,
             type = r.constructor,
             root = BD.store._rootForType(type),
@@ -211,6 +242,11 @@ module.exports = Em.Object.extend({
     },
 
     commitTransactionBulk: function(store, type, rootPlural, data, success, error) {
+        var url = '/' + BD.pluralize(store._rootForType(type));
+        if (amock.has('PATCH', url)) {
+            return this.restAdapter.commitTransactionBulk.apply(this.restAdapter, arguments);
+        }
+
         return this._simulateRemoteCall(function() {
             this._didCommitTransactionBulk(store, type, rootPlural, data, success, error);
         }, this);
