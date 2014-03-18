@@ -7,10 +7,14 @@ Should only be used in tests.
 
 ## Installation
 
-Add the following to your `bower.json` file's `devDependencies section:
+Add the following to your `bower.json` file's `devDependencies` section:
 
-```
-"billy-data-fixture-adapter": "billysbilling/billy-data-fixture-adapter#~1.0.0"
+```javascript
+{
+    "devDependencies": {
+        "billy-data-fixture-adapter": "billysbilling/billy-data-fixture-adapter#~1.0.0"
+    }
+}
 ```
 
 Then in one of your test setup helper files, you tell billy-data to use the fixture adapter by overriding `BD.store`'s `adapter` property:
@@ -34,20 +38,26 @@ App.Invoice.load({
 var invoice = App.Invoice.find('invoice1');
 ```
 
-## [amock](https://github.com/billysbilling/amock) integration
+## amock integration
 
-If you register `amock` handlers, the fixture adapter will use these first. This happens by falling back to the default REST adapter from billy-data.
+If you register [amock](https://github.com/billysbilling/amock) handlers, the fixture adapter will use these first. This happens by falling back to the default REST adapter from billy-data.
 
 This is useful when you want to test what happens with specific error codes for requests that would otherwise be successful due to the local fixtures.
 
 Example:
 
 ```javascript
-amock('POST', '/invoices')
+var invoice = App.Invoice.load({
+    id: 'invoice1',
+    state: 'draft'
+});
+
+amock('PUT', '/invoices/invoice1')
     .reply(422, {
         errorCode: 'NOT_SO_GOOD'
     });
-    
+
+invoice.set('state', 'approved');
 invoice.save()
     .error(function(payload) {
         payload.errorCode === 'NOT_SO_GOOD'; //true
