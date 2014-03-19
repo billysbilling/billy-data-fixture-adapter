@@ -2,8 +2,7 @@ require('./helpers');
 
 var amock = require('amock'),
     sinon = require('sinon'),
-    FixtureAdapter = require('../src/fixture-adapter'),
-    FixtureRequest = require('../src/fixture-request');
+    FixtureAdapter = require('../src/fixture-adapter');
 
 var adapter,
     oldAdapter,
@@ -17,6 +16,8 @@ var adapter,
 QUnit.module('fixture-adapter', {
     setup: function() {
         amock.install();
+
+        BD.urlPrefix = '/v2';
         
         oldAdapter = BD.store.get('adapter');
         adapter = FixtureAdapter.create();
@@ -76,6 +77,8 @@ QUnit.module('fixture-adapter', {
         restAdapterFindByQueryStub.restore();
         restAdapterSaveRecordStub.restore();
         restAdapterCommitTransactionBulkStub.restore();
+
+        BD.urlPrefix = '';
         
         BD.store.set('adapter', oldAdapter);
         BD.store.reset();
@@ -500,7 +503,7 @@ asyncTest('`commitTransactionBulk` calls success with a payload', function() {
 
 
 asyncTest('`deleteRecords` delegates to REST adapter when mock exists', function() {
-    amock('DELETE', '/categories?ids[]=1&ids[]=2');
+    amock('DELETE', '/v2/categories?ids[]=1&ids[]=2');
 
     Em.RSVP.all([App.Category.find(1), App.Category.find(2)]).then(function(records) {
         adapter.deleteRecords(BD.store, App.Category, records, $.noop, $.noop);
@@ -512,7 +515,7 @@ asyncTest('`deleteRecords` delegates to REST adapter when mock exists', function
 });
 
 asyncTest('`deleteRecord` delegates to REST adapter when mock exists', function() {
-    amock('DELETE', '/categories/1');
+    amock('DELETE', '/v2/categories/1');
 
     App.Category.find(1).promise.then(function(category) {
         adapter.deleteRecord(BD.store, category, 1, $.noop, $.noop);
@@ -524,7 +527,7 @@ asyncTest('`deleteRecord` delegates to REST adapter when mock exists', function(
 });
 
 test('`findOne` delegates to REST adapter when mock exists', function() {
-    amock('GET', '/categories/1');
+    amock('GET', '/v2/categories/1');
 
     var category = App.Category.createRecord();
     adapter.findOne(BD.store, App.Category, category, 1, {}, $.noop, $.noop);
@@ -533,7 +536,7 @@ test('`findOne` delegates to REST adapter when mock exists', function() {
 });
 
 test('`findByQuery` delegates to REST adapter when mock exists', function() {
-    amock('GET', '/categories?name=Noah&pageSize=100');
+    amock('GET', '/v2/categories?name=Noah&pageSize=100');
 
     var query = {
         name: 'Noah',
@@ -545,7 +548,7 @@ test('`findByQuery` delegates to REST adapter when mock exists', function() {
 });
 
 test('`saveRecord` delegates to REST adapter when mock exists for new record', function() {
-    amock('POST', '/categories');
+    amock('POST', '/v2/categories');
 
     var record = App.Category.createRecord({
         name: 'Adam'
@@ -556,7 +559,7 @@ test('`saveRecord` delegates to REST adapter when mock exists for new record', f
 });
 
 test('`saveRecord` delegates to REST adapter when mock exists for existing record', function() {
-    amock('PUT', '/categories/8');
+    amock('PUT', '/v2/categories/8');
 
     var record = App.Category.load({
         id: 8,
@@ -568,7 +571,7 @@ test('`saveRecord` delegates to REST adapter when mock exists for existing recor
 });
 
 test('`commitTransactionBulk` delegates to REST adapter when mock exists for existing record', function() {
-    amock('PATCH', '/categories');
+    amock('PATCH', '/v2/categories');
 
     adapter.commitTransactionBulk(BD.store, App.Category, 'categories', {}, $.noop, $.noop);
 

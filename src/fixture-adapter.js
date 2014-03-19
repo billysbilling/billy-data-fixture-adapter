@@ -45,7 +45,7 @@ module.exports = Em.Object.extend({
         var idsQuery = recordsToDelete.map(function(r) {
             return 'ids[]='+encodeURIComponent(r.get('id'));
         }).join('&');
-        var url = '/' + BD.pluralize(store._rootForType(type)) + '?' + idsQuery;
+        var url = BD.url('/' + BD.pluralize(store._rootForType(type)) + '?' + idsQuery);
         
         if (amock.has('DELETE', url)) {
             return this.restAdapter.deleteRecords.apply(this.restAdapter, arguments);
@@ -64,7 +64,7 @@ module.exports = Em.Object.extend({
     },
 
     deleteRecord: function(store, r, id, success, error) {
-        var url = '/' + BD.pluralize(store._rootForType(r.constructor)) + '/' + encodeURIComponent(id);
+        var url = BD.url('/' + BD.pluralize(store._rootForType(r.constructor)) + '/' + encodeURIComponent(id));
         if (amock.has('DELETE', url)) {
             return this.restAdapter.deleteRecord.apply(this.restAdapter, arguments);
         }
@@ -80,7 +80,7 @@ module.exports = Em.Object.extend({
     },
     
     findOne: function(store, type, r, id, query, success, error) {
-        var url = '/' + BD.pluralize(store._rootForType(type)) + '/' + encodeURIComponent(id);
+        var url = BD.url('/' + BD.pluralize(store._rootForType(type)) + '/' + encodeURIComponent(id));
         if (amock.has('GET', url)) {
             return this.restAdapter.findOne.apply(this.restAdapter, arguments);
         }
@@ -114,7 +114,7 @@ module.exports = Em.Object.extend({
     },
 
     findByQuery: function(store, type, query, success, error, complete) {
-        var url  = '/' + BD.pluralize(store._rootForType(type)) + '?' + $.param(query);
+        var url  = BD.url('/' + BD.pluralize(store._rootForType(type)) + '?' + $.param(query));
         if (amock.has('GET', url)) {
             return this.restAdapter.findByQuery.apply(this.restAdapter, arguments);
         }
@@ -192,7 +192,7 @@ module.exports = Em.Object.extend({
     },
 
     saveRecord: function(store, r, payload, options, success, error) {
-        var url = '/' + BD.pluralize(store._rootForType(r.constructor)) + (!r.get('isNew') ? '/' + encodeURIComponent(r.get('id')) : '');
+        var url = BD.url('/' + BD.pluralize(store._rootForType(r.constructor)) + (!r.get('isNew') ? '/' + encodeURIComponent(r.get('id')) : ''));
         if (amock.has(r.get('isNew') ? 'POST' : 'PUT', url)) {
             return this.restAdapter.saveRecord.apply(this.restAdapter, arguments);
         }
@@ -242,7 +242,7 @@ module.exports = Em.Object.extend({
     },
 
     commitTransactionBulk: function(store, type, rootPlural, data, success, error) {
-        var url = '/' + BD.pluralize(store._rootForType(type));
+        var url = BD.url('/' + BD.pluralize(store._rootForType(type)));
         if (amock.has('PATCH', url)) {
             return this.restAdapter.commitTransactionBulk.apply(this.restAdapter, arguments);
         }
