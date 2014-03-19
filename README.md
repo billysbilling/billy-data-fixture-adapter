@@ -63,3 +63,25 @@ invoice.save()
         payload.errorCode === 'NOT_SO_GOOD'; //true
     });
 ```
+```
+
+## Options
+
+You can change options (such as request logging) of the adapter by instantiating it with a hash of options:
+
+```javascript
+var FixtureAdapter = require('billy-data-fixture-adapter');
+BD.store.set('adapter', FixtureAdapter.create({
+    log: true
+}));
+```
+
+Or by calling `set` on the adapter at any time:
+
+```javascript
+BD.store.get('adapter').set('log', true);
+```
+
+Here is a list of the available options:
+
+- `log` (boolean). Set to `true` to log all requests and their responses to the console. Defaults to `false`.

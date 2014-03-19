@@ -5,7 +5,8 @@ var amock = require('amock'),
     FixtureRequest = require('./fixture-request');
 
 module.exports = Em.Object.extend({
-
+    log: false,
+    
     init: function() {
         this._super();
         this._fixtures = {};
@@ -46,13 +47,14 @@ module.exports = Em.Object.extend({
             return 'ids[]='+encodeURIComponent(r.get('id'));
         }).join('&');
         var url = BD.url('/' + BD.pluralize(store._rootForType(type)) + '?' + idsQuery);
+        var c = this._prepareCallbacks('DELETE', url, success, error);
         
-        if (amock.has('DELETE', url)) {
-            return this.restAdapter.deleteRecords.apply(this.restAdapter, arguments);
+        if (c.delegate) {
+            return this.restAdapter.deleteRecords.call(this.restAdapter, store, type, recordsToDelete, c.success, c.error);
         }
         
         return this._simulateRemoteCall(function() {
-            this._didDeleteRecords(store, type, recordsToDelete, success, error);
+            this._didDeleteRecords(store, type, recordsToDelete, c.success, c.error);
         }, this);
     },
 
@@ -65,12 +67,13 @@ module.exports = Em.Object.extend({
 
     deleteRecord: function(store, r, id, success, error) {
         var url = BD.url('/' + BD.pluralize(store._rootForType(r.constructor)) + '/' + encodeURIComponent(id));
-        if (amock.has('DELETE', url)) {
-            return this.restAdapter.deleteRecord.apply(this.restAdapter, arguments);
+        var c = this._prepareCallbacks('DELETE', url, success, error);
+        if (c.delegate) {
+            return this.restAdapter.deleteRecord.call(this.restAdapter, store, r, id, c.success, c.error);
         }
         
         return this._simulateRemoteCall(function() {
-            this._didDeleteRecord(store, r, id, success, error);
+            this._didDeleteRecord(store, r, id, c.success, c.error);
         }, this);
     },
 
@@ -81,12 +84,13 @@ module.exports = Em.Object.extend({
     
     findOne: function(store, type, r, id, query, success, error) {
         var url = BD.url('/' + BD.pluralize(store._rootForType(type)) + '/' + encodeURIComponent(id));
-        if (amock.has('GET', url)) {
-            return this.restAdapter.findOne.apply(this.restAdapter, arguments);
+        var c = this._prepareCallbacks('GET', url, success, error);
+        if (c.delegate) {
+            return this.restAdapter.findOne.call(this.restAdapter, store, type, r, id, query, c.success, c.error);
         }
 
         return this._simulateRemoteCall(function() {
-            this._didFindOne(store, type, r, id, query, success, error);
+            this._didFindOne(store, type, r, id, query, c.success, c.error);
         }, this);
     },
 
@@ -115,12 +119,13 @@ module.exports = Em.Object.extend({
 
     findByQuery: function(store, type, query, success, error, complete) {
         var url  = BD.url('/' + BD.pluralize(store._rootForType(type)) + '?' + $.param(query));
-        if (amock.has('GET', url)) {
-            return this.restAdapter.findByQuery.apply(this.restAdapter, arguments);
+        var c = this._prepareCallbacks('GET', url, success, error);
+        if (c.delegate) {
+            return this.restAdapter.findByQuery.call(this.restAdapter, store, type, query, c.success, c.error, complete);
         }
 
         return this._simulateRemoteCall(function() {
-            this._didFindByQuery(store, type, query, success, error, complete);
+            this._didFindByQuery(store, type, query, c.success, c.error, complete);
         }, this);
     },
 
@@ -193,8 +198,9 @@ module.exports = Em.Object.extend({
 
     saveRecord: function(store, r, payload, options, success, error) {
         var url = BD.url('/' + BD.pluralize(store._rootForType(r.constructor)) + (!r.get('isNew') ? '/' + encodeURIComponent(r.get('id')) : ''));
-        if (amock.has(r.get('isNew') ? 'POST' : 'PUT', url)) {
-            return this.restAdapter.saveRecord.apply(this.restAdapter, arguments);
+        var c = this._prepareCallbacks(r.get('isNew') ? 'POST' : 'PUT', url, success, error);
+        if (c.delegate) {
+            return this.restAdapter.saveRecord.call(this.restAdapter, store, r, payload, options, c.success, c.error);
         }
 
         var self = this,
@@ -237,18 +243,19 @@ module.exports = Em.Object.extend({
                     });
                 });
             }
-            success(response);
+            c.success(response);
         }, this);
     },
 
     commitTransactionBulk: function(store, type, rootPlural, data, success, error) {
         var url = BD.url('/' + BD.pluralize(store._rootForType(type)));
-        if (amock.has('PATCH', url)) {
-            return this.restAdapter.commitTransactionBulk.apply(this.restAdapter, arguments);
+        var c = this._prepareCallbacks('PATCH', url, success, error);
+        if (c.delegate) {
+            return this.restAdapter.commitTransactionBulk.call(this.restAdapter, store, type, rootPlural, data, c.success, c.error);
         }
 
         return this._simulateRemoteCall(function() {
-            this._didCommitTransactionBulk(store, type, rootPlural, data, success, error);
+            this._didCommitTransactionBulk(store, type, rootPlural, data, c.success, c.error);
         }, this);
     },
 
@@ -316,6 +323,31 @@ module.exports = Em.Object.extend({
             callback.apply(context);
         });
         return ajax;
+    },
+    
+    _prepareCallbacks: function(method, url, originalSuccess, originalError) {
+        var self = this,
+            r,
+            source = 'fixtures';
+        r = {
+            success: function(payload) {
+                if (self.get('log')) {
+                    console.debug('fixture-adapter finished loading ('+source+'): %c%s %s', 'color:#000;', method, url, payload);
+                }
+                originalSuccess.apply(null, arguments);
+            },
+            error: function(payload, status) {
+                if (self.get('log')) {
+                    console.error('fixture-adapter ('+source+') %s %c%s %c%s', method, 'color:#000;', url, 'color:#f00;', status, payload);
+                }
+                originalError.apply(null, arguments);
+            },
+            delegate: false
+        };
+        if (amock.has(method, url)) {
+            source = 'amock';
+            r.delegate = true;
+        }
+        return r;
     }
-
 });
