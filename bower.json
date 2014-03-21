@@ -18,8 +18,8 @@
     "package.json"
   ],
   "dependencies": {
-    "amock": "billysbilling/amock#~1.1.0",
-    "billy-data": "billysbilling/billy-data#>=0.12.0"
+    "amock": "billysbilling/amock#>=1.1 <2.0",
+    "billy-data": "billysbilling/billy-data#>=0.12 <1.0"
   },
   "devDependencies": {
     "sinon": "billysbilling/bower-sinon#~1.7.0"
