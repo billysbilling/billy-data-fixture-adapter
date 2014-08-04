@@ -1,3 +1,5 @@
+var $ = require('jquery');
+
 require('./helpers');
 
 var amock = require('amock'),
