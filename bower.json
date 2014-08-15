@@ -19,7 +19,8 @@
   ],
   "dependencies": {
     "amock": "billysbilling/amock#>=1.1 <2.0",
-    "billy-data": "billysbilling/billy-data#>=0.12 <1.0"
+    "billy-data": "billysbilling/billy-data#>=0.12 <1.0",
+    "jquery": "*"
   },
   "devDependencies": {
     "sinon": "billysbilling/bower-sinon#~1.7.0"
