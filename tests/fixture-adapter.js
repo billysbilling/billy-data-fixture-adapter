@@ -19,10 +19,9 @@ QUnit.module('fixture-adapter', {
     setup: function() {
         amock.install();
 
-        BD.urlPrefix = '/v2';
-        
         oldAdapter = BD.store.get('adapter');
         adapter = FixtureAdapter.create();
+        adapter.set('urlPrefix', '/v2');
         BD.store.set('adapter', adapter);
 
         restAdapterDeleteRecordStub = sinon.stub(adapter.restAdapter, 'deleteRecord');
@@ -80,8 +79,6 @@ QUnit.module('fixture-adapter', {
         restAdapterSaveRecordStub.restore();
         restAdapterCommitTransactionBulkStub.restore();
 
-        BD.urlPrefix = '';
-        
         BD.store.set('adapter', oldAdapter);
         BD.store.reset();
 

@@ -7,6 +7,7 @@ var amock = require('amock'),
     FixtureRequest = require('./fixture-request');
 
 module.exports = Em.Object.extend({
+    urlPrefix: '',
     log: false,
     
     init: function() {
@@ -48,7 +49,7 @@ module.exports = Em.Object.extend({
         var idsQuery = recordsToDelete.map(function(r) {
             return 'ids[]='+encodeURIComponent(r.get('id'));
         }).join('&');
-        var url = BD.urlPrefix + '/' + BD.pluralize(store._rootForType(type)) + '?' + idsQuery;
+        var url = this.get('urlPrefix') + '/' + BD.pluralize(store._rootForType(type)) + '?' + idsQuery;
         var c = this._prepareCallbacks('DELETE', url, success, error);
         
         if (c.delegate) {
@@ -68,7 +69,7 @@ module.exports = Em.Object.extend({
     },
 
     deleteRecord: function(store, r, id, success, error) {
-        var url = BD.urlPrefix + '/' + BD.pluralize(store._rootForType(r.constructor)) + '/' + encodeURIComponent(id);
+        var url = this.get('urlPrefix') + '/' + BD.pluralize(store._rootForType(r.constructor)) + '/' + encodeURIComponent(id);
         var c = this._prepareCallbacks('DELETE', url, success, error);
         if (c.delegate) {
             return this.restAdapter.deleteRecord.call(this.restAdapter, store, r, id, c.success, c.error);
@@ -85,7 +86,7 @@ module.exports = Em.Object.extend({
     },
     
     findOne: function(store, type, r, id, query, success, error) {
-        var url = BD.urlPrefix + '/' + BD.pluralize(store._rootForType(type)) + '/' + encodeURIComponent(id);
+        var url = this.get('urlPrefix') + '/' + BD.pluralize(store._rootForType(type)) + '/' + encodeURIComponent(id);
         var c = this._prepareCallbacks('GET', url, success, error);
         if (c.delegate) {
             return this.restAdapter.findOne.call(this.restAdapter, store, type, r, id, query, c.success, c.error);
@@ -120,7 +121,7 @@ module.exports = Em.Object.extend({
     },
 
     findByQuery: function(store, type, query, success, error, complete) {
-        var url  = BD.urlPrefix + '/' + BD.pluralize(store._rootForType(type)) + '?' + $.param(query);
+        var url  = this.get('urlPrefix') + '/' + BD.pluralize(store._rootForType(type)) + '?' + $.param(query);
         var c = this._prepareCallbacks('GET', url, success, error);
         if (c.delegate) {
             return this.restAdapter.findByQuery.call(this.restAdapter, store, type, query, c.success, c.error, complete);
@@ -199,7 +200,7 @@ module.exports = Em.Object.extend({
     },
 
     saveRecord: function(store, r, payload, options, success, error) {
-        var url = BD.urlPrefix + '/' + BD.pluralize(store._rootForType(r.constructor)) + (!r.get('isNew') ? '/' + encodeURIComponent(r.get('id')) : '');
+        var url = this.get('urlPrefix') + '/' + BD.pluralize(store._rootForType(r.constructor)) + (!r.get('isNew') ? '/' + encodeURIComponent(r.get('id')) : '');
         var c = this._prepareCallbacks(r.get('isNew') ? 'POST' : 'PUT', url, success, error);
         if (c.delegate) {
             return this.restAdapter.saveRecord.call(this.restAdapter, store, r, payload, options, c.success, c.error);
@@ -250,7 +251,7 @@ module.exports = Em.Object.extend({
     },
 
     commitTransactionBulk: function(store, type, rootPlural, data, success, error) {
-        var url = BD.urlPrefix + '/' + BD.pluralize(store._rootForType(type));
+        var url = this.get('urlPrefix') + '/' + BD.pluralize(store._rootForType(type));
         var c = this._prepareCallbacks('PATCH', url, success, error);
         if (c.delegate) {
             return this.restAdapter.commitTransactionBulk.call(this.restAdapter, store, type, rootPlural, data, c.success, c.error);
