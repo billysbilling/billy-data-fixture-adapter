@@ -30,7 +30,7 @@ QUnit.module('fixture-adapter', {
         restAdapterFindByQueryStub = sinon.stub(adapter.restAdapter, 'findByQuery');
         restAdapterSaveRecordStub = sinon.stub(adapter.restAdapter, 'saveRecord');
         restAdapterCommitTransactionBulkStub = sinon.stub(adapter.restAdapter, 'commitTransactionBulk');
-        
+
         App.Category = BD.Model.extend({
             name: BD.attr('string'),
             luckyNumber: BD.attr('number'),
@@ -45,18 +45,18 @@ QUnit.module('fixture-adapter', {
             //Sort by char length of name
             return a.get('name').length - b.get('name').length;
         });
-        
+
         App.Post = BD.Model.extend({
             category: BD.belongsTo('App.Category'),
             title: BD.attr('string'),
             comments: BD.hasMany('App.Comment', 'post', {isEmbedded: true})
         });
-        
+
         App.Comment = BD.Model.extend({
             post: BD.belongsTo('App.Post', {isParent: true}),
             message: BD.attr('string')
         });
-        
+
         adapter.setFixtures(App.Category, [
             {
                 id: 1,
@@ -335,7 +335,7 @@ asyncTest('Properties in save() options should be persisted in fixtures for new 
         });
 });
 
-asyncTest('`findByQuery` calls success with a filtered payload and ignores pageSize, offset and other random query params', function() {
+asyncTest('`findByQuery` calls success with a filtered payload and ignores billy-api specific server-only params', function() {
     var success = function(payload) {
         equal(payload.categories.length, 1);
         notStrictEqual(payload.categories[0], adapter.fixturesForType(App.Category)[1], 'data should be a copy');
@@ -346,8 +346,6 @@ asyncTest('`findByQuery` calls success with a filtered payload and ignores pageS
     };
     var query = {
         name: 'Noah',
-        pageSize: 100,
-        offset: 100,
         include: 'category.thing',
         bingo: 'The Tuxedo Cat'
     };
@@ -435,9 +433,91 @@ asyncTest('`findByQuery` sort using sort macro DESC', function() {
     }, $.noop, $.noop);
 });
 
+asyncTest('`findByQuery` with no paging defaults to pageSize=1000&page=1', function() {
+    adapter.setFixtures(App.Category, [
+        {id: 1},
+        {id: 2},
+        {id: 3},
+        {id: 4},
+        {id: 5}
+    ]);
+
+    var success = function(payload) {
+        deepEqual(payload.meta.paging, {pageSize: 1000, page: 1, pageCount: 1, total: 5});
+        deepEqual(payload.categories.mapBy('id'), [1, 2, 3, 4, 5]);
+        start();
+    };
+    var query = {
+    };
+    adapter.findByQuery(BD.store, App.Category, query, success, $.noop, $.noop);
+});
+
+asyncTest('`findByQuery` with pageSize defaults to page=1', function() {
+    adapter.setFixtures(App.Category, [
+        {id: 1},
+        {id: 2},
+        {id: 3},
+        {id: 4},
+        {id: 5}
+    ]);
+
+    var success = function(payload) {
+        deepEqual(payload.meta.paging, {pageSize: 3, page: 1, pageCount: 2, total: 5});
+        deepEqual(payload.categories.mapBy('id'), [1, 2, 3]);
+        start();
+    };
+    var query = {
+        pageSize: 3
+    };
+    adapter.findByQuery(BD.store, App.Category, query, success, $.noop, $.noop);
+});
+
+asyncTest('`findByQuery` with pageSize and page', function() {
+    adapter.setFixtures(App.Category, [
+        {id: 1},
+        {id: 2},
+        {id: 3},
+        {id: 4},
+        {id: 5}
+    ]);
+
+    var success = function(payload) {
+        deepEqual(payload.meta.paging, {pageSize: 3, page: 2, pageCount: 2, total: 5});
+        deepEqual(payload.categories.mapBy('id'), [4, 5]);
+        start();
+    };
+    var query = {
+        pageSize: 3,
+        page: 2
+    };
+    adapter.findByQuery(BD.store, App.Category, query, success, $.noop, $.noop);
+});
+
+asyncTest('`findByQuery` with pageSize and offset', function() {
+    adapter.setFixtures(App.Category, [
+        {id: 1},
+        {id: 2},
+        {id: 3},
+        {id: 4},
+        {id: 5}
+    ]);
+
+    var success = function(payload) {
+        deepEqual(payload.meta.paging, {pageSize: 3, offset: 1, total: 5});
+        deepEqual(payload.categories.mapBy('id'), [2, 3, 4]);
+        start();
+    };
+    var query = {
+        pageSize: 3,
+        offset: 1
+    };
+    adapter.findByQuery(BD.store, App.Category, query, success, $.noop, $.noop);
+});
+
+
 asyncTest('`findByQuery` uses custom filters', function() {
     var c = 3;
-    
+
     adapter.findByQuery(BD.store, App.Category, {minLuckyNumber: 5}, function(payload) {
         equal(payload.categories.length, 1);
         equal(payload.categories[0].name, 'Billy');
@@ -454,7 +534,7 @@ asyncTest('`findByQuery` uses custom filters', function() {
             start();
         }
     }, $.noop, $.noop);
-    
+
     adapter.findByQuery(BD.store, App.Category, {minLuckyNumber: 78}, function(payload) {
         equal(payload.categories.length, 0);
         if (--c === 0) {
@@ -508,7 +588,7 @@ asyncTest('`deleteRecords` delegates to REST adapter when mock exists', function
         adapter.deleteRecords(BD.store, App.Category, records, $.noop, $.noop);
 
         ok(restAdapterDeleteRecordsStub.calledOnce);
-        
+
         start();
     });
 });
@@ -520,7 +600,7 @@ asyncTest('`deleteRecord` delegates to REST adapter when mock exists', function(
         adapter.deleteRecord(BD.store, category, 1, $.noop, $.noop);
 
         ok(restAdapterDeleteRecordStub.calledOnce);
-        
+
         start();
     });
 });

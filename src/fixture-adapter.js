@@ -9,13 +9,13 @@ var amock = require('amock'),
 module.exports = Em.Object.extend({
     urlPrefix: '',
     log: false,
-    
+
     init: function() {
         this._super();
         this._fixtures = {};
         this.restAdapter = BD.RestAdapter.create();
     },
-    
+
     reset: function() {
         this._fixtures = {};
     },
@@ -23,14 +23,14 @@ module.exports = Em.Object.extend({
     fixturesForType: function(type) {
         var guidForType = Em.guidFor(type),
             fixtures = this._fixtures[guidForType];
-        
+
         if (!fixtures) {
             fixtures = [];
             this._fixtures[guidForType] = fixtures;
         }
         return fixtures;
     },
-    
+
     setFixtures: function(type, fixtures) {
         this._fixtures[Em.guidFor(type)] = fixtures;
     },
@@ -51,11 +51,11 @@ module.exports = Em.Object.extend({
         }).join('&');
         var url = this.get('urlPrefix') + '/' + BD.pluralize(store._rootForType(type)) + '?' + idsQuery;
         var c = this._prepareCallbacks('DELETE', url, success, error);
-        
+
         if (c.delegate) {
             return this.restAdapter.deleteRecords.call(this.restAdapter, store, type, recordsToDelete, c.success, c.error);
         }
-        
+
         return this._simulateRemoteCall(function() {
             this._didDeleteRecords(store, type, recordsToDelete, c.success, c.error);
         }, this);
@@ -74,7 +74,7 @@ module.exports = Em.Object.extend({
         if (c.delegate) {
             return this.restAdapter.deleteRecord.call(this.restAdapter, store, r, id, c.success, c.error);
         }
-        
+
         return this._simulateRemoteCall(function() {
             this._didDeleteRecord(store, r, id, c.success, c.error);
         }, this);
@@ -84,7 +84,7 @@ module.exports = Em.Object.extend({
         this._remove(r.constructor, id);
         success({ meta: { status: 200, success: true } });
     },
-    
+
     findOne: function(store, type, r, id, query, success, error) {
         var url = this.get('urlPrefix') + '/' + BD.pluralize(store._rootForType(type)) + '/' + encodeURIComponent(id);
         var c = this._prepareCallbacks('GET', url, success, error);
@@ -134,10 +134,13 @@ module.exports = Em.Object.extend({
 
     _didFindByQuery: function(store, type, query, success, error, complete) {
         complete();
-        var payload = {},
+        var payload = {meta: {}},
             records = [],
             sortProperty = query.sortProperty,
-            sortFactor = query.sortDirection === 'DESC' ? -1 : 1;
+            sortFactor = query.sortDirection === 'DESC' ? -1 : 1,
+            pageSize = query.pageSize || 1000,
+            page = query.page,
+            offset = query.offset;
         payload.meta = { statusCode: 200, success: true };
         this.fixturesForType(type).forEach(function(data) {
             var match = true;
@@ -195,6 +198,24 @@ module.exports = Em.Object.extend({
                 });
             }
         }
+
+        //Handle paging
+        var paging = {
+            total: records.length,
+            pageSize: pageSize
+        };
+        if (!Em.isEmpty(offset)) {
+            records = records.slice(offset, offset + pageSize);
+            paging.offset = offset;
+        } else {
+            page = page || 1;
+            records = records.slice((page - 1) * pageSize, page * pageSize);
+            paging.page = page;
+            paging.pageCount = Math.ceil(paging.total / pageSize);
+        }
+        payload.meta.paging = paging;
+
+        //Add records to payload
         payload[BD.pluralize(store._rootForType(type))] = records;
         success(payload);
     },
@@ -320,14 +341,14 @@ module.exports = Em.Object.extend({
 
     },
 
-    _simulateRemoteCall: function(callback, context) {        
+    _simulateRemoteCall: function(callback, context) {
         var ajax = FixtureRequest.create();
         ajax.schedule(function() {
             callback.apply(context);
         });
         return ajax;
     },
-    
+
     _prepareCallbacks: function(method, url, originalSuccess, originalError) {
         var self = this,
             r,
