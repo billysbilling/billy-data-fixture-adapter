@@ -54,6 +54,7 @@ QUnit.module('fixture-adapter', {
 
         App.Comment = BD.Model.extend({
             post: BD.belongsTo('App.Post', {isParent: true}),
+            fun: BD.belongsToReference(),
             message: BD.attr('string')
         });
 
@@ -350,6 +351,36 @@ asyncTest('`findByQuery` calls success with a filtered payload and ignores billy
         bingo: 'The Tuxedo Cat'
     };
     adapter.findByQuery(BD.store, App.Category, query, success, $.noop, $.noop);
+});
+
+asyncTest('`findByQuery` works with belongs-to ids', function() {
+    adapter.setFixtures(App.Comment, [
+        {id: 1, postId: 101},
+        {id: 2, postId: 102}
+    ]);
+    var success = function(payload) {
+        deepEqual(payload.comments.mapBy('id'), [1]);
+        start();
+    };
+    var query = {
+        postId: 101
+    };
+    adapter.findByQuery(BD.store, App.Comment, query, success, $.noop, $.noop);
+});
+
+asyncTest('`findByQuery` works with belongs-to references', function() {
+    adapter.setFixtures(App.Comment, [
+        {id: 1, funReference: 'post:101'},
+        {id: 2, funReference: 'post:102'}
+    ]);
+    var success = function(payload) {
+        deepEqual(payload.comments.mapBy('id'), [2]);
+        start();
+    };
+    var query = {
+        funReference: 'post:102'
+    };
+    adapter.findByQuery(BD.store, App.Comment, query, success, $.noop, $.noop);
 });
 
 asyncTest('`findByQuery` works with arrays as query params', function() {

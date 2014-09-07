@@ -156,7 +156,7 @@ module.exports = Em.Object.extend({
                             }
                         } else {
                             //Don't filter if the property is not an attribute name or a belongs-to-relationship
-                            if (!Em.get(type, 'attributes').get(name) && !Em.get(type, 'belongsToRelationships').get(name.replace(/Id$/, ''))) {
+                            if (!Em.get(type, 'attributes').get(name) && !Em.get(type, 'belongsToRelationships').get(name.replace(/(Id|Reference)$/, ''))) {
                                 continue;
                             }
                             //|| name === 'pageSize' || name === 'offset' || name === 'include' || name === 'sortProperty' || name === 'sortDirection'
