@@ -2,7 +2,6 @@ require('billy-data');
 require('ember');
 
 module.exports = Em.Object.extend({
-
     DELAY: 0,
 
     init: function() {
@@ -11,8 +10,7 @@ module.exports = Em.Object.extend({
 
     abort: function() {
         if (this.timeoutId) {
-            this.triggerAjaxStop();
-            this.clearTimeout(this.timeoutId);
+            Em.run.cancel(this.timeoutId);
             this.timeoutId = null;
         } else {
             Em.warn('There is no scheduled callback');
@@ -21,30 +19,9 @@ module.exports = Em.Object.extend({
 
     schedule: function(cb) {
         var self = this;
-        this.triggerAjaxStart();
-        this.timeoutId = this.setTimeout(function() {
-            Em.run(function() {
-                cb();
-                self.timeoutId = null;
-                self.triggerAjaxStop();
-            });
+        this.timeoutId = Em.run.later(this, function() {
+            cb();
+            self.timeoutId = null;
         }, this.DELAY);
-    },
-
-    clearTimeout: function(id) {
-        return window.clearTimeout(id);
-    },
-
-    setTimeout: function(cb, delay) {
-        return window.setTimeout(cb, delay);
-    },
-
-    triggerAjaxStart: function() {
-        jQuery.event.trigger('ajaxStart');
-    },
-
-    triggerAjaxStop: function() {
-        jQuery.event.trigger('ajaxStop');
     }
-
 });
